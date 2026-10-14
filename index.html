@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Pemilih - Pemilos</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#b71c1c; color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
+  .card { background:#fff; color:#222; padding:30px; border-radius:12px; width:90%; max-width:380px; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+  h1 { font-size:22px; margin-bottom:4px; }
+  p.sub { color:#666; margin-top:0; margin-bottom:20px; font-size:14px; }
+  input { width:100%; padding:12px; font-size:16px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box; margin-bottom:12px; }
+  button { width:100%; padding:12px; font-size:16px; background:#b71c1c; color:#fff; border:none; border-radius:8px; cursor:pointer; }
+  button:active { opacity:0.85; }
+  #msg { color:#c62828; font-size:14px; min-height:18px; margin-top:8px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🗳️ Pemilos SMK Aska</h1>
+    <p class="sub">Masukkan NIS kamu untuk memilih</p>
+    <input type="text" id="nis" placeholder="Nomor Induk Siswa (NIS)" inputmode="numeric">
+    <button onclick="cekNIS()">Masuk</button>
+    <div id="msg"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    async function cekNIS() {
+      const nis = document.getElementById('nis').value.trim();
+      const msg = document.getElementById('msg');
+      msg.textContent = '';
+
+      if (!nis) {
+        msg.textContent = 'NIS tidak boleh kosong.';
+        return;
+      }
+
+      const ref = db.collection('pemilih').doc(nis);
+      const doc = await ref.get();
+
+      if (doc.exists && doc.data().sudah_vote) {
+        msg.textContent = 'NIS ini sudah digunakan untuk memilih.';
+        return;
+      }
+
+      sessionStorage.setItem('nis', nis);
+      window.location.href = 'vote.html';
+    }
+  </script>
+</body>
+</html>

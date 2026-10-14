@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Panitia - Pemilos</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:16px; }
+  h1 { text-align:center; color:#b71c1c; font-size:20px; }
+  .card { background:#fff; border-radius:12px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+  .card b { font-size:16px; display:block; }
+  .bar-bg { background:#eee; border-radius:6px; height:20px; margin-top:8px; overflow:hidden; }
+  .bar-fill { background:#b71c1c; height:100%; transition:width 0.4s; }
+  .count { text-align:right; font-size:13px; color:#555; margin-top:4px; }
+  #gate { display:flex; flex-direction:column; align-items:center; margin-top:100px; }
+  #gate input { padding:10px; font-size:16px; border-radius:8px; border:1px solid #ccc; margin-bottom:10px; width:220px; }
+  #gate button { padding:10px 20px; background:#b71c1c; color:#fff; border:none; border-radius:8px; }
+  #total { text-align:center; color:#444; margin-bottom:16px; }
+</style>
+</head>
+<body>
+  <div id="gate">
+    <h1>🔒 Login Panitia</h1>
+    <input type="password" id="pass" placeholder="Password panitia">
+    <button onclick="cekPass()">Masuk</button>
+    <div id="gateMsg" style="color:#c62828; font-size:14px;"></div>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+    <h1>📊 Hasil Pemilos (Realtime)</h1>
+    <div id="total"></div>
+    <div id="hasil"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    // Ganti password ini sesuai keinginan kamu
+    const PASSWORD_PANITIA = 'pemilos2026';
+
+    function cekPass() {
+      const pass = document.getElementById('pass').value;
+      if (pass === PASSWORD_PANITIA) {
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        mulaiListener();
+      } else {
+        document.getElementById('gateMsg').textContent = 'Password salah.';
+      }
+    }
+
+    function mulaiListener() {
+      db.collection('votes').onSnapshot(snapshot => {
+        const hasilDiv = document.getElementById('hasil');
+        const totalDiv = document.getElementById('total');
+        hasilDiv.innerHTML = '';
+
+        let data = [];
+        let total = 0;
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          data.push(d);
+          total += d.suara || 0;
+        });
+
+        totalDiv.textContent = `Total suara masuk: ${total}`;
+
+        data.sort((a,b) => (b.suara||0) - (a.suara||0));
+
+        data.forEach(d => {
+          const persen = total > 0 ? Math.round((d.suara/total)*100) : 0;
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <b>${d.ketua} - ${d.wakil}</b>
+            <div class="bar-bg"><div class="bar-fill" style="width:${persen}%"></div></div>
+            <div class="count">${d.suara || 0} suara (${persen}%)</div>
+          `;
+          hasilDiv.appendChild(card);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

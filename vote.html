@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pilih Calon - Pemilos</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:16px; }
+  h1 { text-align:center; color:#b71c1c; font-size:20px; margin-bottom:4px; }
+  p.sub { text-align:center; color:#666; margin-top:0; margin-bottom:20px; font-size:14px; }
+  .candidate { background:#fff; border-radius:12px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .candidate .info b { display:block; font-size:16px; }
+  .candidate .info span { color:#777; font-size:13px; }
+  .candidate button { background:#b71c1c; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:14px; white-space:nowrap; }
+  #msg { text-align:center; margin-top:16px; color:#c62828; font-size:14px; }
+</style>
+</head>
+<body>
+  <h1>🗳️ Pilih Ketua &amp; Wakil OSIS</h1>
+  <p class="sub">Pilihanmu bersifat rahasia dan hanya bisa dilakukan satu kali</p>
+
+  <div id="list"></div>
+  <div id="msg"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    // Ganti nama-nama calon di sini sesuai kebutuhan
+    const kandidat = [
+      { id: '1', ketua: 'Calon 1 - Nama Ketua', wakil: 'Nama Wakil' },
+      { id: '2', ketua: 'Calon 2 - Nama Ketua', wakil: 'Nama Wakil' },
+      { id: '3', ketua: 'Calon 3 - Nama Ketua', wakil: 'Nama Wakil' },
+    ];
+
+    const nis = sessionStorage.getItem('nis');
+    if (!nis) window.location.href = 'index.html';
+
+    const list = document.getElementById('list');
+    kandidat.forEach(k => {
+      const div = document.createElement('div');
+      div.className = 'candidate';
+      div.innerHTML = `
+        <div class="info">
+          <b>${k.ketua}</b>
+          <span>Wakil: ${k.wakil}</span>
+        </div>
+        <button onclick="pilih('${k.id}')">Pilih</button>
+      `;
+      list.appendChild(div);
+    });
+
+    async function pilih(id) {
+      const msg = document.getElementById('msg');
+      msg.textContent = '';
+
+      try {
+        await db.runTransaction(async (t) => {
+          const pemilihRef = db.collection('pemilih').doc(nis);
+          const pemilihDoc = await t.get(pemilihRef);
+
+          if (pemilihDoc.exists && pemilihDoc.data().sudah_vote) {
+            throw new Error('sudah_vote');
+          }
+
+          const suaraRef = db.collection('votes').doc(id);
+          const suaraDoc = await t.get(suaraRef);
+          const suaraSaatIni = suaraDoc.exists ? (suaraDoc.data().suara || 0) : 0;
+
+          const kInfo = kandidat.find(k => k.id === id);
+          t.set(suaraRef, { ketua: kInfo.ketua, wakil: kInfo.wakil, suara: suaraSaatIni + 1 });
+          t.set(pemilihRef, { sudah_vote: true, waktu: firebase.firestore.FieldValue.serverTimestamp() });
+        });
+
+        document.body.innerHTML = `
+          <div style="text-align:center; margin-top:80px;">
+            <h1 style="color:#2e7d32;">✅ Terima kasih!</h1>
+            <p>Suara kamu sudah tercatat.</p>
+          </div>`;
+        sessionStorage.removeItem('nis');
+
+      } catch (e) {
+        if (e.message === 'sudah_vote') {
+          msg.textContent = 'Kamu sudah memilih sebelumnya.';
+        } else {
+          msg.textContent = 'Terjadi kesalahan, coba lagi.';
+          console.error(e);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
